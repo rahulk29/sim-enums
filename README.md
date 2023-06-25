@@ -1,5 +1,18 @@
 # Simulator Enums
 
+![CI](https://github.com/rahulk29/sim-enums/actions/workflows/ci.yml/badge.svg)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+## Overview
+
+The API in this crate allows users of simulator plugins to do things like this:
+
+```rs
+let simulator_output: (AcOutput, TranOutput) = simulator.simulate((AcInput, TranInput));
+```
+
+## Background
+
 Integrated circuit simulators often allow users to run different types
 of analyses (DC analysis, AC analysis, transient analysis, etc.).
 
@@ -30,7 +43,7 @@ This API presents a few unchecked "promises":
 - Element `i` of the output should be the output corresponding to input `i`.
 
 This example crate shows how a more strongly typed API can be layered upon this
-basic API. Using the API in this crate, you can do things like this:
+basic API. Using the API in this crate, you can do this:
 
 ```rs
 let simulator_output: (AcOutput, TranOutput) = simulator.simulate((AcInput, TranInput));
