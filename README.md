@@ -1,6 +1,6 @@
 # Simulator Enums
 
-![CI](https://github.com/rahulk29/sim-enums/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/rahulk29/sim-enums/actions/workflows/ci.yaml/badge.svg)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 ## Overview
