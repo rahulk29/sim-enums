@@ -2,38 +2,82 @@ pub trait Analysis {
     type Output;
 }
 
+#[derive(Debug, Clone)]
 pub enum Input {
     Tran(Tran),
     Ac(Ac),
 }
 
+#[derive(Debug, Clone)]
 pub enum Output {
     Tran(TranOutput),
     Ac(AcOutput),
 }
 
+#[derive(Debug, Clone)]
 pub struct Spectre;
+#[derive(Debug, Clone)]
 pub struct Tran;
+#[derive(Debug, Clone)]
 pub struct Ac;
+#[derive(Debug, Clone)]
 pub struct TranOutput;
+#[derive(Debug, Clone)]
 pub struct AcOutput;
 
 impl Analysis for Tran {
     type Output = TranOutput;
 }
+impl Analysis for Ac {
+    type Output = AcOutput;
+}
 
-impl SupportedBy<Spectre> for Tran {
-    fn into_input(self, inputs: &mut Vec<<Spectre as Simulator>::Input>) {
-        todo!()
+impl Supports<Tran> for Spectre {
+    fn into_input(a: Tran, inputs: &mut Vec<Self::Input>) {
+        inputs.push(Input::Tran(a));
     }
-    fn from_output(outputs: &mut Vec<<Spectre as Simulator>::Output>) -> Self::Output {
-        todo!()
+    fn from_output(outputs: &mut impl Iterator<Item = Self::Output>) -> <Tran as Analysis>::Output {
+        let output = outputs.next().unwrap();
+        match output {
+            Output::Tran(tran) => tran,
+            _ => panic!("tran analysis output did not get back tran output"),
+        }
     }
+}
+impl Supports<Ac> for Spectre {
+    fn into_input(a: Ac, inputs: &mut Vec<Self::Input>) {
+        inputs.push(Input::Ac(a));
+    }
+    fn from_output(outputs: &mut impl Iterator<Item = Self::Output>) -> <Ac as Analysis>::Output {
+        let output = outputs.next().unwrap();
+        match output {
+            Output::Ac(ac) => ac,
+            _ => panic!("ac analysis output did not get back ac output"),
+        }
+    }
+}
+
+pub trait Supports<A: Analysis>: Simulator {
+    fn into_input(a: A, inputs: &mut Vec<Self::Input>);
+    fn from_output(outputs: &mut impl Iterator<Item = Self::Output>) -> A::Output;
 }
 
 pub trait SupportedBy<S: Simulator>: Analysis {
     fn into_input(self, inputs: &mut Vec<S::Input>);
-    fn from_output(outputs: &mut Vec<S::Output>) -> Self::Output;
+    fn from_output(outputs: &mut impl Iterator<Item = S::Output>) -> Self::Output;
+}
+
+impl<S, A> SupportedBy<S> for A
+where
+    A: Analysis,
+    S: Supports<A>,
+{
+    fn into_input(self, inputs: &mut Vec<<S as Simulator>::Input>) {
+        S::into_input(self, inputs);
+    }
+    fn from_output(outputs: &mut impl Iterator<Item = <S as Simulator>::Output>) -> Self::Output {
+        S::from_output(outputs)
+    }
 }
 
 pub trait Simulator {
@@ -43,13 +87,15 @@ pub trait Simulator {
 
     fn simulate<A: Analysis>(&self, input: A) -> A::Output
     where
-        A: SupportedBy<Self>,
+        Self: Supports<A>,
+        A: Analysis,
         Self: Sized,
     {
         let mut inputs = Vec::new();
-        input.into_input(&mut inputs);
-        let mut output = self.raw_simulate(inputs);
-        A::from_output(&mut output)
+        Self::into_input(input, &mut inputs);
+        let output = self.raw_simulate(inputs);
+        let mut output = output.into_iter();
+        Self::from_output(&mut output)
     }
 }
 
@@ -61,27 +107,25 @@ where
     type Output = (T1::Output, T2::Output);
 }
 
-impl<T1, T2, S> SupportedBy<S> for (T1, T2)
+impl<T1, T2, S> Supports<(T1, T2)> for S
 where
-    T1: SupportedBy<S>,
-    T2: SupportedBy<S>,
+    S: Supports<T1> + Supports<T2>,
+    T1: Analysis,
+    T2: Analysis,
     S: Simulator,
 {
-    fn into_input(self, inputs: &mut Vec<S::Input>) {
-        todo!()
+    fn into_input(a: (T1, T2), inputs: &mut Vec<S::Input>) {
+        Self::into_input(a.0, inputs);
+        Self::into_input(a.1, inputs);
     }
 
-    fn from_output(output: &mut Vec<S::Output>) -> Self::Output {
-        todo!()
+    fn from_output(
+        outputs: &mut impl Iterator<Item = Self::Output>,
+    ) -> <(T1, T2) as Analysis>::Output {
+        let o0 = <Self as Supports<T1>>::from_output(outputs);
+        let o1 = <Self as Supports<T2>>::from_output(outputs);
+        (o0, o1)
     }
-}
-
-pub trait SimulatorExt: Simulator {
-    fn simulate<A: Analysis>(&self, input: A) -> A::Output;
-
-    // fn simulate1<T1>(&self, input: T1) -> T1::Output where T1: Analysis, T1: Into<Self::Input>, Self::Output: Into<T1::Output> {
-    //     self.simulate(vec![input.into()]).pop().unwrap().into()
-    // }
 }
 
 impl Simulator for Spectre {
@@ -89,16 +133,24 @@ impl Simulator for Spectre {
     type Output = Output;
 
     fn raw_simulate(&self, input: Vec<Input>) -> Vec<Output> {
-        todo!()
+        let mut outputs = Vec::new();
+        for input in input {
+            match input {
+                Input::Tran(_) => outputs.push(Output::Tran(TranOutput)),
+                Input::Ac(_) => outputs.push(Output::Ac(AcOutput)),
+            }
+        }
+        outputs
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn simulate_tuple() {
         let simulator = Spectre;
-        let x = simulator.simulate((Tran, Tran));
-        println!("hi");
+        let x = simulator.simulate((Tran, Ac));
+        println!("Result of simulating (Tran, Ac): {x:?}");
     }
 }
