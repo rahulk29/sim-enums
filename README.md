@@ -32,7 +32,7 @@ This API presents a few unchecked "promises":
 This example crate shows how a more strongly typed API can be layered upon this
 basic API. Using the API in this crate, you can do things like this:
 
-```
+```rs
 let simulator_output: (AcOutput, TranOutput) = simulator.simulate((AcInput, TranInput));
 ```
 
