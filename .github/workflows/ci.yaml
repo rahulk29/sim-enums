@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+  check-workspace:
+    name: Build, lint, and test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        id: toolchain
+        with:
+          toolchain: stable
+          components: clippy
+      - name: Cache workspace
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ steps.toolchain.outputs.cachekey }}
+      - name: Install `cargo-hack`
+        uses: taiki-e/install-action@cargo-hack
+      - name: Check formatting
+        run: |
+          cargo fmt --check
+      - name: Lint
+        run: |
+          cargo hack --feature-powerset clippy -- -D warnings
+      - name: Test
+        run: cargo test --all-features
